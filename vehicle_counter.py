@@ -12,7 +12,9 @@ MQTT_TOPIC = "traffic/avenida1"
 MQTT_USERNAME = "admin"
 MQTT_PASSWORD = "admin"
 
-LIMITE_VEICULOS = 10
+LIMITE_VEICULOS_LEVE = 15
+LIMITE_VEICULOS_MODERADO = 25
+LIMITE_VEICULOS_PESADO = 45
 
 INTERVALO_SEGUNDOS = 5
 CLASSES_VEICULOS = [2, 3, 5, 7]  # carro, moto, onibus, caminhão
@@ -26,7 +28,7 @@ torch.serialization.add_safe_globals({'ultralytics.nn.tasks.DetectionModel': Det
 # client.loop_start()
 
 model = YOLO("yolov8n.pt")
-cap = cv2.VideoCapture("Transito_pesado_2.mp4")
+cap = cv2.VideoCapture("Transito_leve.mp4")
 
 ultimo_processamento = 0
 last_status = ""
@@ -49,8 +51,13 @@ while True:
         for cls in results.boxes.cls:
             if int(cls) in CLASSES_VEICULOS:
                 veiculos += 1
-
-        status = "intenso" if veiculos > LIMITE_VEICULOS else "livre"
+        
+        if veiculos <= LIMITE_VEICULOS_LEVE:
+            status = "livre"
+        elif LIMITE_VEICULOS_LEVE < veiculos <= LIMITE_VEICULOS_MODERADO:
+            status = "moderado"
+        elif LIMITE_VEICULOS_MODERADO < veiculos <= LIMITE_VEICULOS_PESADO:
+            status = "intenso"
         print(f"[DEBUG] Veículos: {veiculos} | Status: {status}")
 
         # Envia por MQTT somente se status mudar
@@ -67,6 +74,8 @@ while True:
 
     # Exibição
     cv2.putText(frame_com_bboxes, f"Veiculos: {veiculos}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+    cv2.putText(frame_com_bboxes,f"Transito: {status}", (10, 60),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
     cv2.imshow("Monitoramento", frame_com_bboxes)
 

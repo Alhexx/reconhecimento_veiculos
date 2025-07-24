@@ -1,0 +1,20 @@
+@startuml
+title Flow
+
+participant Rasp as "Edge\n(Raspberry Pi + Camera)"
+participant Broker as "MQTT Broker"
+participant Backend as "Backend"
+participant DB as "Database"
+participant Display as "Display\n(ESP32)"
+
+Rasp -> Rasp : Capture traffic data
+Rasp -> Rasp : Classify congestion level
+Rasp -> Broker : Publish raw\n("traffic/raw/{street_id}")
+Broker -> Backend : Deliver raw message
+Backend -> Backend : Validate payload
+Backend -> DB     : INSERT INTO traffic_raw(...)
+Backend -> DB     : INSERT INTO traffic_status(...)
+Backend -> Broker : Publish status\n("traffic/status/{street_id}")
+Broker -> Display : Deliver status message
+Display -> Display: Update traffic panel
+@enduml

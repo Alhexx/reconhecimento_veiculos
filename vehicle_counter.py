@@ -9,7 +9,7 @@ import datetime
 
 MQTT_BROKER = "107.172.94.10"
 MQTT_PORT = 1883
-MQTT_TOPIC = "traffic/prudente_de_moraes/raw"
+MQTT_TOPIC = "traffic/raw/prudente_de_moraes"
 # MQTT_USERNAME = "admin"
 # MQTT_PASSWORD = "admin"
 
@@ -42,39 +42,39 @@ while True:
 		cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 		continue
 
-	agora = time.time()
-	if agora - ultimo_processamento >= INTERVALO_SEGUNDOS:
-		ultimo_processamento = agora
+	# agora = time.time()
+	# if agora - ultimo_processamento >= INTERVALO_SEGUNDOS:
+	# 	ultimo_processamento = agora
 
-		results = model(frame, stream=False, verbose=False)[0]
+	results = model(frame, stream=False, verbose=False)[0]
 
-		veiculos = 0
-		for cls in results.boxes.cls:
-				if int(cls) in CLASSES_VEICULOS:
-						veiculos += 1
-		
-		if veiculos <= LIMITE_VEICULOS_LEVE:
-				status = "low"
-		elif LIMITE_VEICULOS_LEVE < veiculos <= LIMITE_VEICULOS_MODERADO:
-				status = "medium"
-		elif LIMITE_VEICULOS_MODERADO < veiculos <= LIMITE_VEICULOS_PESADO:
-				status = "high"
-		# print(f"[DEBUG] Veículos: {veiculos} | Status: {status}")
+	veiculos = 0
+	for cls in results.boxes.cls:
+			if int(cls) in CLASSES_VEICULOS:
+					veiculos += 1
+	
+	if veiculos <= LIMITE_VEICULOS_LEVE:
+			status = "low"
+	elif LIMITE_VEICULOS_LEVE < veiculos <= LIMITE_VEICULOS_MODERADO:
+			status = "medium"
+	elif LIMITE_VEICULOS_MODERADO < veiculos <= LIMITE_VEICULOS_PESADO:
+			status = "high"
+	# print(f"[DEBUG] Veículos: {veiculos} | Status: {status}")
 
-		# Envia por MQTT somente se status mudar
-		if status != last_status:
-			payload = {
-					"device_id": "rasp_prudente_de_moraes",
-					"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
-					"street_id": "prudente_de_moraes",
-					"vehicle_count": veiculos,
-					"congestion_level": status
-			}
-			print(payload)
+	# Envia por MQTT somente se status mudar
+	if status != last_status:
+		payload = {
+				"device_id": "rasp_prudente_de_moraes",
+				"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
+				"street_id": "prudente_de_moraes",
+				"vehicle_count": veiculos,
+				"congestion_level": status
+		}
+		print(payload)
 
-			mensagem = json.dumps(payload)
-			client.publish(MQTT_TOPIC, mensagem, qos=0)
-			last_status = status
+		mensagem = json.dumps(payload)
+		client.publish(MQTT_TOPIC, mensagem, qos=0, retain=True)
+		last_status = status
 
 	frame_com_bboxes = results.plot()
 
